@@ -86,7 +86,7 @@
 	
 		<i class="iconfont icon-words"></i>
 		<span>
-			1541
+			1623
 		</span>
 	
 </div>
@@ -99,77 +99,8 @@
 		
 
 			
-					<p>简介:<br>行为模式把具体的算法封装到了具体策略角色内部，增强了可扩展性，隐蔽了实现细节；它替代继承来实现，避免了if-else这种不易维护的条件语句。当然我们也可以看到，由于独立策略实现，使得系统内增加了很多策略类<br><a id="more"></a><br>，下面直接上代码：</p>
-<pre><code>package com.jd.designPattern.Interpreter
-
-trait Action
-trait Direction
-
-object Up extends Direction
-object Down extends Direction
-object Left extends Direction
-object Right extends Direction
-object Run extends Action
-object Move extends Action
-object Then extends Action
-
-object Interpreter extends App { //main方法
-  val robot = new Robot
-  robot up Run length 10 and Then left Move length 5 and Then right Run length 3 and Then down Move length 8
-}
-
-class Robot(var x: Int = 0, var y: Int = 0) {
-  private var actions: String = null
-  private var directions: Direction = null
-  private var tag: String = null
-  def up(action: Action): this.type = {
-    action match {
-      case Run =&gt; actions = &quot;快速移动&quot;
-      case Move =&gt; actions = &quot;移动&quot;
-    }
-    directions = Up
-    this
-  }
-  def down(action: Action): this.type = {
-    action match {
-      case Run =&gt; actions = &quot;快速移动&quot;
-      case Move =&gt; actions = &quot;移动&quot;
-    }
-    directions = Down
-    this
-  }
-
-  def left(action: Action): this.type = {
-    action match {
-      case Run =&gt; actions = &quot;快速移动&quot;
-      case Move =&gt; actions = &quot;移动&quot;
-    }
-    directions = Left
-    this
-  }
-  def right(action: Action): this.type = {
-    action match {
-      case Run =&gt; actions = &quot;快速移动&quot;
-      case Move =&gt; actions = &quot;移动&quot;
-    }
-    directions = Right
-    this
-  }
-
-  def length(length: Int): this.type = {
-    directions match {
-      case Up =&gt; y += length; tag = &quot;向上&quot;
-      case Down =&gt; y -= length; tag = &quot;向下&quot;
-      case Left =&gt; x -= length; tag = &quot;向左&quot;
-      case Right =&gt; x += length; tag = &quot;向右&quot;
-    }
-    println(s&quot;机器人$tag$actions :$length ,此时的位置为x坐标:$x,y坐标:$y&quot;)
-    this
-  }
-
-  def and(word: Then.type) = this
-}
-</code></pre>  	
+					<p>简介:<br>行为模式把具体的算法封装到了具体策略角色内部，增强了可扩展性，隐蔽了实现细节；它替代继承来实现，避免了if-else这种不易维护的条件语句。当然我们也可以看到，由于独立策略实现，使得系统内增加了很多策略类<br><a id="more"></a><br>，下面直接上代码：<br><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.jd.designPattern.<span class="type">Interpreter</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">trait</span> <span class="title">Action</span></span></span><br><span class="line"><span class="class"><span class="title">trait</span> <span class="title">Direction</span></span></span><br><span class="line"><span class="class"></span></span><br><span class="line"><span class="class"><span class="title">object</span> <span class="title">Up</span> <span class="keyword">extends</span> <span class="title">Direction</span></span></span><br><span class="line"><span class="class"><span class="title">object</span> <span class="title">Down</span> <span class="keyword">extends</span> <span class="title">Direction</span></span></span><br><span class="line"><span class="class"><span class="title">object</span> <span class="title">Left</span> <span class="keyword">extends</span> <span class="title">Direction</span></span></span><br><span class="line"><span class="class"><span class="title">object</span> <span class="title">Right</span> <span class="keyword">extends</span> <span class="title">Direction</span></span></span><br><span class="line"><span class="class"><span class="title">object</span> <span class="title">Run</span> <span class="keyword">extends</span> <span class="title">Action</span></span></span><br><span class="line"><span class="class"><span class="title">object</span> <span class="title">Move</span> <span class="keyword">extends</span> <span class="title">Action</span></span></span><br><span class="line"><span class="class"><span class="title">object</span> <span class="title">Then</span> <span class="keyword">extends</span> <span class="title">Action</span></span></span><br><span class="line"><span class="class"></span></span><br><span class="line"><span class="class"><span class="title">object</span> <span class="title">Interpreter</span> <span class="keyword">extends</span> <span class="title">App</span> </span>&#123; <span class="comment">//main方法</span></span><br><span class="line">  <span class="keyword">val</span> robot = <span class="keyword">new</span> <span class="type">Robot</span></span><br><span class="line">  robot up <span class="type">Run</span> length <span class="number">10</span> and <span class="type">Then</span> left <span class="type">Move</span> length <span class="number">5</span> and <span class="type">Then</span> right <span class="type">Run</span> length <span class="number">3</span> and <span class="type">Then</span> down <span class="type">Move</span> length <span class="number">8</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Robot</span>(<span class="params">var x: <span class="type">Int</span> = 0, var y: <span class="type">Int</span> = 0</span>) </span>&#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">var</span> actions: <span class="type">String</span> = <span class="literal">null</span></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">var</span> directions: <span class="type">Direction</span> = <span class="literal">null</span></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">var</span> tag: <span class="type">String</span> = <span class="literal">null</span></span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">up</span></span>(action: <span class="type">Action</span>): <span class="keyword">this</span>.<span class="keyword">type</span> = &#123;</span><br><span class="line">	action <span class="keyword">match</span> &#123;</span><br><span class="line">	  <span class="keyword">case</span> <span class="type">Run</span> =&gt; actions = <span class="string">"快速移动"</span></span><br><span class="line">	  <span class="keyword">case</span> <span class="type">Move</span> =&gt; actions = <span class="string">"移动"</span></span><br><span class="line">	&#125;</span><br><span class="line">	directions = <span class="type">Up</span></span><br><span class="line">	<span class="keyword">this</span></span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">down</span></span>(action: <span class="type">Action</span>): <span class="keyword">this</span>.<span class="keyword">type</span> = &#123;</span><br><span class="line">	action <span class="keyword">match</span> &#123;</span><br><span class="line">	  <span class="keyword">case</span> <span class="type">Run</span> =&gt; actions = <span class="string">"快速移动"</span></span><br><span class="line">	  <span class="keyword">case</span> <span class="type">Move</span> =&gt; actions = <span class="string">"移动"</span></span><br><span class="line">	&#125;</span><br><span class="line">	directions = <span class="type">Down</span></span><br><span class="line">	<span class="keyword">this</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">left</span></span>(action: <span class="type">Action</span>): <span class="keyword">this</span>.<span class="keyword">type</span> = &#123;</span><br><span class="line">	action <span class="keyword">match</span> &#123;</span><br><span class="line">	  <span class="keyword">case</span> <span class="type">Run</span> =&gt; actions = <span class="string">"快速移动"</span></span><br><span class="line">	  <span class="keyword">case</span> <span class="type">Move</span> =&gt; actions = <span class="string">"移动"</span></span><br><span class="line">	&#125;</span><br><span class="line">	directions = <span class="type">Left</span></span><br><span class="line">	<span class="keyword">this</span></span><br><span class="line">  &#125;</span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">right</span></span>(action: <span class="type">Action</span>): <span class="keyword">this</span>.<span class="keyword">type</span> = &#123;</span><br><span class="line">	action <span class="keyword">match</span> &#123;</span><br><span class="line">	  <span class="keyword">case</span> <span class="type">Run</span> =&gt; actions = <span class="string">"快速移动"</span></span><br><span class="line">	  <span class="keyword">case</span> <span class="type">Move</span> =&gt; actions = <span class="string">"移动"</span></span><br><span class="line">	&#125;</span><br><span class="line">	directions = <span class="type">Right</span></span><br><span class="line">	<span class="keyword">this</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">length</span></span>(length: <span class="type">Int</span>): <span class="keyword">this</span>.<span class="keyword">type</span> = &#123;</span><br><span class="line">	directions <span class="keyword">match</span> &#123;</span><br><span class="line">	  <span class="keyword">case</span> <span class="type">Up</span> =&gt; y += length; tag = <span class="string">"向上"</span></span><br><span class="line">	  <span class="keyword">case</span> <span class="type">Down</span> =&gt; y -= length; tag = <span class="string">"向下"</span></span><br><span class="line">	  <span class="keyword">case</span> <span class="type">Left</span> =&gt; x -= length; tag = <span class="string">"向左"</span></span><br><span class="line">	  <span class="keyword">case</span> <span class="type">Right</span> =&gt; x += length; tag = <span class="string">"向右"</span></span><br><span class="line">	&#125;</span><br><span class="line">	println(<span class="string">s"机器人<span class="subst">$tag</span><span class="subst">$actions</span> :<span class="subst">$length</span> ,此时的位置为x坐标:<span class="subst">$x</span>,y坐标:<span class="subst">$y</span>"</span>)</span><br><span class="line">	<span class="keyword">this</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">and</span></span>(word: <span class="type">Then</span>.<span class="keyword">type</span>) = <span class="keyword">this</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+  	
 					
 	  </div>     
 	  
@@ -283,7 +214,7 @@ class Robot(var x: Int = 0, var y: Int = 0) {
 			<div class="sidebar">
 			<p class="toc-title">
 				<i class="iconfont icon-toc"></i>
-				目录
+				Contents
 			</p>
 			<div class="toc-list">
 				
@@ -304,7 +235,7 @@ class Robot(var x: Int = 0, var y: Int = 0) {
     
     <div class="search-container sildeUpMin">
         <div class="search-header">
-            <input type="text" placeholder="输入你想搜索的" id="search-input" class="search-input">
+            <input type="text" placeholder="Typing Something here." id="search-input" class="search-input">
             <span class="search-cancel">
                 <i class="iconfont icon-cancel">
             </i></span>
@@ -321,31 +252,31 @@ class Robot(var x: Int = 0, var y: Int = 0) {
          
             
 
-            <a class="mobile-menu-link" href="/">首页
+            <a class="mobile-menu-link" href="/">Home
             </a>
             
          
             
 
-            <a class="mobile-menu-link" href="/archives">归档
+            <a class="mobile-menu-link" href="/archives">Archives
             </a>
             
          
             
 
-            <a class="mobile-menu-link" href="/tags">标签
+            <a class="mobile-menu-link" href="/tags">Tags
             </a>
             
          
             
 
-            <a class="mobile-menu-link" href="/about">关于
+            <a class="mobile-menu-link" href="/about">About
             </a>
             
          
                           
 
-            <a class="mobile-menu-link mobile-menu-search" href="#">搜索 </a>                 
+            <a class="mobile-menu-link mobile-menu-search" href="#">Search </a>                 
             
          
       
