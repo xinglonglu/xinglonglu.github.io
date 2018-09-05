@@ -86,7 +86,7 @@
 	
 		<i class="iconfont icon-words"></i>
 		<span>
-			110
+			1532
 		</span>
 	
 </div>
@@ -99,8 +99,76 @@
 		
 
 			
-					<p>简介:<br><a id="more"></a><br>  行为模式把具体的算法封装到了具体策略角色内部，增强了可扩展性，隐蔽了实现细节；它替代继承来实现，避免了if-else这种不易维护的条件语句。当然我们也可以看到，行为模式由于独立策略实现，使得系统内增加了很多行为类</p>
-  	
+					<p>简介:<br>行为模式把具体的算法封装到了具体策略角色内部，增强了可扩展性，隐蔽了实现细节；它替代继承来实现，避免了if-else这种不易维护的条件语句。当然我们也可以看到，由于独立策略实现，使得系统内增加了很多策略类<br><a id="more"></a><br>，下面直接上代码：</p>
+<pre><code>package com.jd.designPattern.Interpreter
+trait Action
+trait Direction
+
+object Up extends Direction
+object Down extends Direction
+object Left extends Direction
+object Right extends Direction
+object Run extends Action
+object Move extends Action
+object Then extends Action
+
+object Interpreter extends App {
+  val robot = new Robot
+  robot up Run length 10 and Then left Move length 5 and Then right Run length 3 and Then down Move length 8
+}
+
+class Robot(var x: Int = 0, var y: Int = 0) {
+  private var actions: String = null
+  private var directions: Direction = null
+  private var tag: String = null
+  def up(action: Action): this.type = {
+    action match {
+      case Run =&gt; actions = &quot;快速移动&quot;
+      case Move =&gt; actions = &quot;移动&quot;
+    }
+    directions = Up
+    this
+  }
+  def down(action: Action): this.type = {
+    action match {
+      case Run =&gt; actions = &quot;快速移动&quot;
+      case Move =&gt; actions = &quot;移动&quot;
+    }
+    directions = Down
+    this
+  }
+
+  def left(action: Action): this.type = {
+    action match {
+      case Run =&gt; actions = &quot;快速移动&quot;
+      case Move =&gt; actions = &quot;移动&quot;
+    }
+    directions = Left
+    this
+  }
+  def right(action: Action): this.type = {
+    action match {
+      case Run =&gt; actions = &quot;快速移动&quot;
+      case Move =&gt; actions = &quot;移动&quot;
+    }
+    directions = Right
+    this
+  }
+
+  def length(length: Int): this.type = {
+    directions match {
+      case Up =&gt; y += length; tag = &quot;向上&quot;
+      case Down =&gt; y -= length; tag = &quot;向下&quot;
+      case Left =&gt; x -= length; tag = &quot;向左&quot;
+      case Right =&gt; x += length; tag = &quot;向右&quot;
+    }
+    println(s&quot;机器人$tag$actions :$length ,此时的位置为x坐标:$x,y坐标:$y&quot;)
+    this
+  }
+
+  def and(word: Then.type) = this
+}
+</code></pre>  	
 					
 	  </div>     
 	  
@@ -214,7 +282,7 @@
 			<div class="sidebar">
 			<p class="toc-title">
 				<i class="iconfont icon-toc"></i>
-				目录
+				Contents
 			</p>
 			<div class="toc-list">
 				
@@ -235,7 +303,7 @@
     
     <div class="search-container sildeUpMin">
         <div class="search-header">
-            <input type="text" placeholder="输入你想搜索的" id="search-input" class="search-input">
+            <input type="text" placeholder="Typing Something here." id="search-input" class="search-input">
             <span class="search-cancel">
                 <i class="iconfont icon-cancel">
             </i></span>
@@ -252,31 +320,31 @@
          
             
 
-            <a class="mobile-menu-link" href="/">首页
+            <a class="mobile-menu-link" href="/">Home
             </a>
             
          
             
 
-            <a class="mobile-menu-link" href="/archives">归档
+            <a class="mobile-menu-link" href="/archives">Archives
             </a>
             
          
             
 
-            <a class="mobile-menu-link" href="/tags">标签
+            <a class="mobile-menu-link" href="/tags">Tags
             </a>
             
          
             
 
-            <a class="mobile-menu-link" href="/about">关于
+            <a class="mobile-menu-link" href="/about">About
             </a>
             
          
                           
 
-            <a class="mobile-menu-link mobile-menu-search" href="#">搜索 </a>                 
+            <a class="mobile-menu-link mobile-menu-search" href="#">Search </a>                 
             
          
       
