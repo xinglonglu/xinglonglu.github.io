@@ -86,7 +86,7 @@
 	
 		<i class="iconfont icon-words"></i>
 		<span>
-			1532
+			1541
 		</span>
 	
 </div>
@@ -101,6 +101,7 @@
 			
 					<p>简介:<br>行为模式把具体的算法封装到了具体策略角色内部，增强了可扩展性，隐蔽了实现细节；它替代继承来实现，避免了if-else这种不易维护的条件语句。当然我们也可以看到，由于独立策略实现，使得系统内增加了很多策略类<br><a id="more"></a><br>，下面直接上代码：</p>
 <pre><code>package com.jd.designPattern.Interpreter
+
 trait Action
 trait Direction
 
@@ -112,7 +113,7 @@ object Run extends Action
 object Move extends Action
 object Then extends Action
 
-object Interpreter extends App {
+object Interpreter extends App { //main方法
   val robot = new Robot
   robot up Run length 10 and Then left Move length 5 and Then right Run length 3 and Then down Move length 8
 }
@@ -282,7 +283,7 @@ class Robot(var x: Int = 0, var y: Int = 0) {
 			<div class="sidebar">
 			<p class="toc-title">
 				<i class="iconfont icon-toc"></i>
-				Contents
+				目录
 			</p>
 			<div class="toc-list">
 				
@@ -303,7 +304,7 @@ class Robot(var x: Int = 0, var y: Int = 0) {
     
     <div class="search-container sildeUpMin">
         <div class="search-header">
-            <input type="text" placeholder="Typing Something here." id="search-input" class="search-input">
+            <input type="text" placeholder="输入你想搜索的" id="search-input" class="search-input">
             <span class="search-cancel">
                 <i class="iconfont icon-cancel">
             </i></span>
@@ -320,31 +321,31 @@ class Robot(var x: Int = 0, var y: Int = 0) {
          
             
 
-            <a class="mobile-menu-link" href="/">Home
+            <a class="mobile-menu-link" href="/">首页
             </a>
             
          
             
 
-            <a class="mobile-menu-link" href="/archives">Archives
+            <a class="mobile-menu-link" href="/archives">归档
             </a>
             
          
             
 
-            <a class="mobile-menu-link" href="/tags">Tags
+            <a class="mobile-menu-link" href="/tags">标签
             </a>
             
          
             
 
-            <a class="mobile-menu-link" href="/about">About
+            <a class="mobile-menu-link" href="/about">关于
             </a>
             
          
                           
 
-            <a class="mobile-menu-link mobile-menu-search" href="#">Search </a>                 
+            <a class="mobile-menu-link mobile-menu-search" href="#">搜索 </a>                 
             
          
       
