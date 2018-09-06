@@ -1,0 +1,336 @@
+<!DOCTYPE html PUBLIC "-//WAPFORUM//DTD XHTML Mobile 1.0//EN" "http://www.wapforum.org/DTD/xhtml-mobile10.dtd">
+<html>
+  <head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  
+  
+  <title>  Mysql的mvcc简述和hbase的mvcc源码解析 |   hexo-theme-nayo </title>
+
+ 
+  
+    <link rel="icon" href="/images/favicon.png">
+  
+
+
+  <link rel="stylesheet" href="/nayo.min.css"> 
+</head>  
+  <body>   
+    
+      <header class="header">
+	
+  <nav class="header-nav">        
+
+    <span class="iconfont icon-menu mobile-toggle"></span>   	
+
+    <div class="header-menu">          
+              
+          
+            <a class="header-menu-link" id="header-menu-home" href="/">
+              <i class="iconfont icon-home">  
+            </i></a>     
+          
+              
+          
+            <a class="header-menu-link" id="header-menu-archives" href="/archives">
+              <i class="iconfont icon-archives">  
+            </i></a>     
+          
+              
+          
+            <a class="header-menu-link" id="header-menu-tags" href="/tags">
+              <i class="iconfont icon-tags">  
+            </i></a>     
+          
+              
+          
+            <a class="header-menu-link" id="header-menu-about" href="/about">
+              <i class="iconfont icon-about">  
+            </i></a>     
+          
+              
+          
+            <a class="header-menu-link" id="header-menu-search">
+              <i class="iconfont icon-search">  
+            </i></a>
+          
+                  
+    </div>  
+    
+  </nav>
+</header>
+
+   
+
+      <div class="container">       
+          
+          
+            <section class="main">  
+          
+
+          <article class="post">
+  
+	<div class="post-header">
+
+	<p class="post-title">	
+		mysql的mvcc简述和hbase的mvcc源码解析
+	</p>
+			
+
+	<div class="meta-info">	
+	<span>
+		Sep 06, 2018
+	</span>
+
+	
+	
+		<i class="iconfont icon-words"></i>
+		<span>
+			2383
+		</span>
+	
+</div>
+
+</div> 
+	 
+
+	  <div class="typo post-content slideDownMin">
+
+		
+
+			
+					<p>mvcc为多版本并发控制，不同的数据库，不同的存储引擎实现的方式都不同<br><a id="more"></a><br>由于mysql都是C++，源码就不看了，这里简单了解下：Innodb 通过undo实现了mvcc，主要是为了隔离级别RR做的，此隔离级别下，ab两个客户端数据隔离，互相更新不可见，缺点是每行记录都需要额外的存储空间，undolog默认是存储到系统表空间中的，<br>5.6以后可以存到独立的undo表空间<br>简单介绍一下undo的工作流程<br>| 序号 | 动作              |<br>|  1   | START TRANSACTION |<br>|  2   | 记录快照到undolog |<br>|  3   | 更新数据          |<br>|  4   | 将undo写到磁盘    |<br>|  5   | 将数据写到磁盘    |<br>Innodb中的隐藏列：<br>DB_ROW_ID  简单的认为成一个单调递增的id<br>DB_TRX_ID  事务id  每处理一个事务 自动加1 通过show engine innodb status 来查看<br>DB_ROLL_PTR 回滚指针</p>
+<p>初始数据行</p>
+<p>|data|data|DB_ROW_ID|DB_TRX_ID|DB_ROLL_PTR|<br>| 00  | 00  |    1    |   0  |    0   |<br>事务1更新各行该字段的值</p>
+<p>TRANSACTION1<br>| 10 | 10 |    2    |    1    |     1     |<br>undolog<br>| 00  | 00  |    1    |   0  |    0   |<br>当事务1 更改原始值时会进行如下操作</p>
+<p>1 用排他锁 锁定该行<br>2 记录redo<br>3 将修改前的值copy到undo  如上图<br>4 新的一行填写事务id 然后将回滚指针指向上一个RowId</p>
+<p>事务2 修改该行<br>TRANSACTION2<br>| 20 | 20 |    3    |    2    |     2     |</p>
+<p>undolog<br>| 10 | 10 |    2    |    1    |     1     |</p>
+<p>| 00 | 00 |    1    |   0  |    0   |<br>与事务1 相同 此时undo中有两条log</p>
+<p>当事务正常提交的时候只需要更改事务状态为COMMIT即可，当回滚的时候需要根据当前的回滚指针从undo中找到对应的版本</p>
+<p>当执行selcet的时候，Innodb 会查找小于当前事务的版本的数据行，这样保证该事务读取的行是之前存在的 或者是自己插入的<br>当执行delete的时候，删除的版本号要大于当前的事务id，说明删除操作是在当前事务启动后操作的</p>
+<hr>
+<p>##Hbase<br>hbase提供了mvcc实现了读写并发控制<br>先说一下hbase的lock，在hbase2.0.0以后 在org.apache.hadoop.hbase.client.locking有个EntityLock他通过巧妙的使用CountDownLatch(1)实现了tableLock namespaceLock  regionLock  。主要思想是在这个类中有个LockHeartbeatWorker 的线程 ，在服务器端每个访问者都会起一个线程，每个线程在处理数据操作时必须获得锁，而其他线程要修改必须等到前面的线程释放，这就用到了CountDownLatch(1)，他可以在完成一个正在进行的操作之前 ，使一个或者多个线程等待。</p>
+<p>而hbase 的mvcc在org.apache.hadoop.hbase.regionserver中的一个MultiVersionConcurrencyControl 类<br>这个类里维护了一个读序号和写序号<br><img src="/2018/09/06/mysql的mvcc和hbase的mvcc/1.png" width="666"><br>一个WriteEntry和一个存放WriteEntry的queue，每个WriteEntry代表一个写的线程，writeNumber代表写操作当时的事务id<br><img src="/2018/09/06/mysql的mvcc和hbase的mvcc/2.png" width="666"><br><img src="/2018/09/06/mysql的mvcc和hbase的mvcc/3.png" width="666"><br>hbase的数据写入主要分两步<br>1.数据首先写入memstore<br>2.数据写入WAL，写入WAL的目的是为了持久化，防止memstore中的数据还未落盘时宕机造成的数据丢失，只有数据写入WAL成功之后才会认为该数据写入成功</p>
+<p>下面看一段写入wal的代码：<br><img src="/2018/09/06/mysql的mvcc和hbase的mvcc/4.png" width="666"><br>wal怎么写的就不说了，主要看这两个方法<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">writeEntry = mvcc.begin();</span><br><span class="line">mvcc.completeAndWait(writeEntry);</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> WriteEntry <span class="title">begin</span><span class="params">(Runnable action)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">synchronized</span> (writeQueue) &#123;</span><br><span class="line">    <span class="keyword">long</span> nextWriteNumber = writePoint.incrementAndGet();</span><br><span class="line">    WriteEntry e = <span class="keyword">new</span> WriteEntry(nextWriteNumber);</span><br><span class="line">    writeQueue.add(e);</span><br><span class="line">    action.run();</span><br><span class="line">    <span class="keyword">return</span> e;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>简单来说就是将当前事务id+1，然后新建WriteEntry对象，将事务id放入WriteEntry中，最后把他放入queue里，放到queue里是为了写操作在执行的时候是顺序执行可以简单理解HBase在每次put操作时，都会为该操作分配一个id，可以类比mysql里面的事务id，是本次put的唯一标识<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">completeAndWait</span><span class="params">(WriteEntry e)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (!complete(e)) &#123;</span><br><span class="line">    waitForRead(e);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>complete主要工作是推进writeQueue工作，然后将readPoint尽量的更新到最大的WriteNumber</p>
+<p>如果最后readPoint还是小于当前的WriteNumber，则进入waitForRead，在waitForRead将等待readPoint达到当前写入的线程事务id，如果过久则interrupted</p>
+<p>下面看一段读的时候的scan的代码<br><img src="/2018/09/06/mysql的mvcc和hbase的mvcc/5.png" width="666"><br>它获取了readPoint，注意只有在READ_COMMITTED下，readpoint才是生效的，然后会对memstore和storeFile进行查询，过滤掉大于这次readPoint的数据，防止读取到还没提交成功的数据，也就是READ_COMMITTED读已提交，如果是READ_COMMITTED则readPoint会返回Long.MAX_VALUE，就有会读到最新的的数据包括没提交的</p>
+  	
+					
+	  </div>     
+	  
+
+	
+<div class="post-meta">
+      	
+
+      	
+</div>
+
+
+
+
+
+<div class="post-footer">
+  <div class="pf-left">
+      <img class="pf-avatar lazyload" src="/images/placeholder.png" data-src="/images/2.png">
+      <p class="pf-des">hi,lao tie</p>
+  </div>
+
+  <div class="pf-right">           
+      <div class="pf-links">
+        
+
+
+
+
+<span class="donate-btn">
+	<span class="iconfont icon-donate"></span>
+</span>
+
+
+<div id="donate-box" class="sildeUpMin">
+
+	<span class="donate-cancel iconfont icon-cancel"></span>
+
+	<div class="donate-img-box">
+		<img id="donate-qr-wechat" class="noLazyLoad donate-img lazyload" src="/images/placeholder.png" alt="No Donate Image!" data-src="/images/donate1.png">	
+		<img id="donate-qr-alipay" class="noLazyLoad donate-img lazyload" src="/images/placeholder.png" alt="No Donate Image!" data-src="/images/donate2.png">	
+	</div>
+
+	<span class="donate-word">世界美好 你也是</span>
+
+	<div class="donate-list">
+		<span class="iconfont icon-donate-wechat"></span>
+		<span class="iconfont icon-donate-alipay"></span>
+	</div>
+
+</div>
+
+ 
+        
+	
+<script id="-mob-share" src="http://f1.webshare.mob.com/code/mob-share.js?appkey=21d601593a1de"></script>
+	
+	<span class="share-btn">
+	<span class="iconfont icon-share"></span>
+	</span>
+
+
+	<div class="-mob-share sildeUpMin">
+		   			             
+            <a class="iconfont  icon-share-qq -mob-share-qq"></a>		
+     	   			             
+            <a class="iconfont  icon-share-weixin -mob-share-weixin"></a>		
+     	   			             
+            <a class="iconfont  icon-share-weibo -mob-share-weibo"></a>		
+     	   			             
+            <a class="iconfont  icon-share-douban -mob-share-douban"></a>		
+     	   			             
+            <a class="iconfont  icon-share-facebook -mob-share-facebook"></a>		
+     	   			             
+            <a class="iconfont  icon-share-twitter -mob-share-twitter"></a>		
+     	   			             
+            <a class="iconfont  icon-share-google -mob-share-google"></a>		
+     	   
+	</div>	
+
+      </div>  
+    <nav class="pf-paginator">
+           
+        
+      
+        
+        <a href="/2018/09/06/设计模式之行为模式/" data-hover="设计模式之行为模式"> Next</a>
+            
+  </nav>   
+  </div>
+</div> 
+	
+
+
+    
+    <div id="disqus_thread"></div>
+
+    <script>
+    (function() { 
+    var d = document, s = d.createElement('script');
+    s.src = 'https://'+'lemonreds'+'.disqus.com/embed.js';
+    s.setAttribute('data-timestamp', +new Date());    
+    (d.head || d.body).appendChild(s);
+    })();
+    </script>
+
+    <noscript>Please enable JavaScript to view the  <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+    </noscript>
+
+
+	
+</article>
+
+	<div class="toc-container">
+			<div class="sidebar">
+			<p class="toc-title">
+				<i class="iconfont icon-toc"></i>
+				Contents
+			</p>
+			<div class="toc-list">
+				
+			</div>
+		</div>
+	</div>
+
+          </section> 
+      </div>            
+    
+    <a id="backTop">
+      <span>
+        <i class="iconfont icon-backtotop"></i>
+      </span>
+    </a> 
+
+  
+    
+    <div class="search-container sildeUpMin">
+        <div class="search-header">
+            <input type="text" placeholder="Typing Something here." id="search-input" class="search-input">
+            <span class="search-cancel">
+                <i class="iconfont icon-cancel">
+            </i></span>
+        </div>
+        <div id="search-result" class="search-result"></div>
+    </div>
+ 
+     <div class="mobile-menu">      
+
+      
+      <img class="mobile-menu-icon lazyload" src="/images/placeholder.png" data-src="/images/favicon.png">   
+      
+
+         
+            
+
+            <a class="mobile-menu-link" href="/">Home
+            </a>
+            
+         
+            
+
+            <a class="mobile-menu-link" href="/archives">Archives
+            </a>
+            
+         
+            
+
+            <a class="mobile-menu-link" href="/tags">Tags
+            </a>
+            
+         
+            
+
+            <a class="mobile-menu-link" href="/about">About
+            </a>
+            
+         
+                          
+
+            <a class="mobile-menu-link mobile-menu-search" href="#">Search </a>                 
+            
+         
+      
+</div>        
+    
+
+
+
+     
+    
+
+
+
+
+<footer id="footer">	    
+
+		
+		<div class="footer-copyright">
+		&copy;
+		
+		2018		
+	
+		Lemon
+		<br>
+
+		Theme By
+		<a href="https://github.com/Lemonreds/hexo-theme-Nayo" target="_blank">Nayo</a>	
+		</div>			
+	 
+</footer>   
+
+  
+
+    <script src="/nayo.bundle.js"></script>           
+  </body>        
+</html>

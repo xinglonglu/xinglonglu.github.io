@@ -75,13 +75,13 @@
 
 <div class="profile sildeUpMin">
 	
-		<img class="avatar" src="/images/header.jpg">
+		<img class="avatar" src="/images/2.png">
 
 		<p class="author">Arthas</p>
 		
 		<div class="social">
    		      	
-			<a target="_blank" class="social-links" href="https://github.com/Lemonreds/hexo-theme-nayo">		
+			<a target="_blank" class="social-links" href="https://github.com/xinglonglu">		
 				<i class="iconfont icon-Github">
 			</i></a>	
 	          	
@@ -113,12 +113,12 @@
 	   
 	<div class="article-header">
 	    
-		<a class="article-title" href="/2018/09/04/设计模式之行为模式/">设计模式之行为模式</a>  
+		<a class="article-title" href="/2018/09/06/mysql的mvcc和hbase的mvcc/">mysql的mvcc简述和hbase的mvcc源码解析</a>  
 	       
 		 
 
 		<div class="article-meta">
-			<time>Sep 04, 2018</time>
+			<time>Sep 06, 2018</time>
 			
 		</div>
 	</div>
@@ -129,12 +129,80 @@
     
 	<div class="typo article-excerpt">	
 		
-			<p>简介:<br>行为模式把具体的算法封装到了具体策略角色内部，增强了可扩展性，隐蔽了实现细节；它替代继承来实现，避免了if-else这种不易维护的条件语句。当然我们也可以看到，由于独立策略实现，使得系统内增加了很多策略类<br>
+			<p>mvcc为多版本并发控制，不同的数据库，不同的存储引擎实现的方式都不同<br></p>
 		  	  
-	</p></div>
+	</div>
 
 	<div class="article-bottom">
-		<a class="article-readmore" href="/2018/09/04/设计模式之行为模式/">Continue</a> 	
+		<a class="article-readmore" href="/2018/09/06/mysql的mvcc和hbase的mvcc/">Continue</a> 	
+	</div>	
+    
+</article>     
+     	
+    	  	
+  		
+    			
+
+<article class="article">		
+	   
+	<div class="article-header">
+	    
+		<a class="article-title" href="/2018/09/06/设计模式之行为模式/">设计模式之行为模式</a>  
+	       
+		 
+
+		<div class="article-meta">
+			<time>Sep 06, 2018</time>
+			
+		</div>
+	</div>
+
+
+	
+
+    
+	<div class="typo article-excerpt">	
+		
+			<p>简介:<br>行为模式把具体的算法封装到了具体策略角色内部，增强了可扩展性，隐蔽了实现细节；它替代继承来实现，避免了if-else这种不易维护的条件语句。当然我们也可以看到，由于独立策略实现，使得系统内增加了很多策略类<br></p>
+		  	  
+	</div>
+
+	<div class="article-bottom">
+		<a class="article-readmore" href="/2018/09/06/设计模式之行为模式/">Continue</a> 	
+	</div>	
+    
+</article>     
+     	
+    	  	
+  		
+    			
+
+<article class="article">		
+	   
+	<div class="article-header">
+	    
+		<a class="article-title" href="/2018/09/05/Flink的windows触发机制解析/">Flink的window触发机制解析</a>  
+	       
+		 
+
+		<div class="article-meta">
+			<time>Sep 05, 2018</time>
+			
+		</div>
+	</div>
+
+
+	
+
+    
+	<div class="typo article-excerpt">	
+		
+			<p>window通常结合watermark机制来实现，而watermark是用于处理乱序事件的，流处理从事件产生，到流经source，再到operator，中间是有一个过程和时间的。<br>虽然大部分情况下，流到operator的数据都是按照事件产生的时间顺序来的，但是也不排除由于网络等原因，导致late element的产生，但是对于late element，必须要有个机制来保证一个特定的时间后，必须触发window去进行计算了。这个特别的机制，就是watermark。<br></p>
+		  	  
+	</div>
+
+	<div class="article-bottom">
+		<a class="article-readmore" href="/2018/09/05/Flink的windows触发机制解析/">Continue</a> 	
 	</div>	
     
 </article>     

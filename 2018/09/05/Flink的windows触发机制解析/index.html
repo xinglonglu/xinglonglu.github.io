@@ -1,0 +1,325 @@
+<!DOCTYPE html PUBLIC "-//WAPFORUM//DTD XHTML Mobile 1.0//EN" "http://www.wapforum.org/DTD/xhtml-mobile10.dtd">
+<html>
+  <head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  
+  
+  <title>  Flink的window触发机制解析 |   hexo-theme-nayo </title>
+
+ 
+  
+    <link rel="icon" href="/images/favicon.png">
+  
+
+
+  <link rel="stylesheet" href="/nayo.min.css"> 
+</head>  
+  <body>   
+    
+      <header class="header">
+	
+  <nav class="header-nav">        
+
+    <span class="iconfont icon-menu mobile-toggle"></span>   	
+
+    <div class="header-menu">          
+              
+          
+            <a class="header-menu-link" id="header-menu-home" href="/">
+              <i class="iconfont icon-home">  
+            </i></a>     
+          
+              
+          
+            <a class="header-menu-link" id="header-menu-archives" href="/archives">
+              <i class="iconfont icon-archives">  
+            </i></a>     
+          
+              
+          
+            <a class="header-menu-link" id="header-menu-tags" href="/tags">
+              <i class="iconfont icon-tags">  
+            </i></a>     
+          
+              
+          
+            <a class="header-menu-link" id="header-menu-about" href="/about">
+              <i class="iconfont icon-about">  
+            </i></a>     
+          
+              
+          
+            <a class="header-menu-link" id="header-menu-search">
+              <i class="iconfont icon-search">  
+            </i></a>
+          
+                  
+    </div>  
+    
+  </nav>
+</header>
+
+   
+
+      <div class="container">       
+          
+          
+            <section class="main">  
+          
+
+          <article class="post">
+  
+	<div class="post-header">
+
+	<p class="post-title">	
+		Flink的window触发机制解析
+	</p>
+			
+
+	<div class="meta-info">	
+	<span>
+		Sep 05, 2018
+	</span>
+
+	
+	
+		<i class="iconfont icon-words"></i>
+		<span>
+			3507
+		</span>
+	
+</div>
+
+</div> 
+	 
+
+	  <div class="typo post-content slideDownMin">
+
+		
+
+			
+					<p>window通常结合watermark机制来实现，而watermark是用于处理乱序事件的，流处理从事件产生，到流经source，再到operator，中间是有一个过程和时间的。<br>虽然大部分情况下，流到operator的数据都是按照事件产生的时间顺序来的，但是也不排除由于网络等原因，导致late element的产生，但是对于late element，必须要有个机制来保证一个特定的时间后，必须触发window去进行计算了。这个特别的机制，就是watermark。<br><a id="more"></a><br>watermark是一种衡量Event Time进展的机制，它是数据本身的一个隐藏属性。通常基于Event Time的数据，自身都包含一个timestamp，例如1536138000000（2018/9/5 17:00:00），而这条数据的watermark时间则可能是：<br><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> watermark = <span class="number">1536138000000</span></span><br></pre></td></tr></table></figure></p>
+<p>这条watermark的含义为，timestamp 小于1536138000000 都到达了</p>
+<p>##watermark 如何生成？<br>通常可以在source接受到数据后立刻生成，也可以在map，filter一系列操作后生成<br>生成watermark的方式主要是Periodic Watermarks，他可以定义一个最大的乱序时间，下面我们来看两个需要实现的接口和官方默认的一个生成方式<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">TimestampAssigner</span>&lt;<span class="title">T</span>&gt; <span class="keyword">extends</span> <span class="title">Function</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">long</span> <span class="title">extractTimestamp</span><span class="params">(T var1, <span class="keyword">long</span> var2)</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">AssignerWithPeriodicWatermarks</span>&lt;<span class="title">T</span>&gt; <span class="keyword">extends</span> <span class="title">TimestampAssigner</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">    <span class="meta">@Nullable</span></span><br><span class="line">    <span class="function">Watermark <span class="title">getCurrentWatermark</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>第一个是提取事件中的Timestamp，一个是获取Watermark，下面是官方的一个实现<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">IngestionTimeExtractor</span>&lt;<span class="title">T</span>&gt; <span class="keyword">implements</span> <span class="title">AssignerWithPeriodicWatermarks</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">long</span> serialVersionUID = -<span class="number">4072216356049069301L</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">long</span> maxTimestamp;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">IngestionTimeExtractor</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">extractTimestamp</span><span class="params">(T element, <span class="keyword">long</span> previousElementTimestamp)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">long</span> now = Math.max(System.currentTimeMillis(), <span class="keyword">this</span>.maxTimestamp);</span><br><span class="line">        <span class="keyword">this</span>.maxTimestamp = now;</span><br><span class="line">        <span class="keyword">return</span> now;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Watermark <span class="title">getCurrentWatermark</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">long</span> now = Math.max(System.currentTimeMillis(), <span class="keyword">this</span>.maxTimestamp);</span><br><span class="line">        <span class="keyword">this</span>.maxTimestamp = now;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> Watermark(now - <span class="number">1L</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>它使用了现在时间为事件的Timestamp，Watermark为Timestamp-1，下面我们的程序为了方便操作 自己定义一个Timestamp<br><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">main</span></span>(args: <span class="type">Array</span>[<span class="type">String</span>]): <span class="type">Unit</span> = &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">val</span>  env =<span class="type">StreamExecutionEnvironment</span>.createLocalEnvironment()</span><br><span class="line"></span><br><span class="line">    env.setStreamTimeCharacteristic(<span class="type">TimeCharacteristic</span>.<span class="type">EventTime</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">val</span> input = env.socketTextStream(hostName,port)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">val</span> inputMap = input.map(f=&gt; &#123;</span><br><span class="line">      <span class="keyword">val</span> arr = f.split(<span class="string">","</span>)</span><br><span class="line">      <span class="keyword">val</span> code = arr(<span class="number">0</span>)</span><br><span class="line">      <span class="keyword">val</span> time = arr(<span class="number">1</span>).toLong</span><br><span class="line">      (code,time)</span><br><span class="line">    &#125;)</span><br><span class="line">	  <span class="comment">//下面生成watermark</span></span><br><span class="line">	  <span class="keyword">val</span> watermark = inputMap.assignTimestampsAndWatermarks(<span class="keyword">new</span> <span class="type">AssignerWithPeriodicWatermarks</span>[(<span class="type">String</span>,<span class="type">Long</span>)] &#123;</span><br><span class="line">	  <span class="keyword">var</span> currentMaxTimestamp = <span class="number">0</span>L</span><br><span class="line">	  <span class="keyword">val</span> maxOutOfOrderness = <span class="number">10000</span>L <span class="comment">//最大允许的乱序时间是10s</span></span><br><span class="line"></span><br><span class="line">	  <span class="keyword">var</span> a: <span class="type">Watermark</span> = <span class="literal">null</span></span><br><span class="line"></span><br><span class="line">	  <span class="keyword">val</span> format = <span class="keyword">new</span> <span class="type">SimpleDateFormat</span>(<span class="string">"yyyy-MM-dd HH:mm:ss.SSS"</span>)</span><br><span class="line"></span><br><span class="line">	  <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">getCurrentWatermark</span></span>: <span class="type">Watermark</span> = &#123;</span><br><span class="line">		a = <span class="keyword">new</span> <span class="type">Watermark</span>(currentMaxTimestamp - maxOutOfOrderness)</span><br><span class="line">		a</span><br><span class="line">	  &#125;</span><br><span class="line"></span><br><span class="line">	  <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">extractTimestamp</span></span>(t: (<span class="type">String</span>, <span class="type">Long</span>), l: <span class="type">Long</span>): <span class="type">Long</span> = &#123;</span><br><span class="line">		<span class="keyword">val</span> timestamp = t._2</span><br><span class="line">		currentMaxTimestamp = <span class="type">Math</span>.max(timestamp, currentMaxTimestamp)</span><br><span class="line">		println(<span class="string">"timestamp:"</span> + t._1 + <span class="string">","</span> + t._2 + <span class="string">"|"</span> + format.format(t._2) + <span class="string">","</span> + currentMaxTimestamp + <span class="string">"|"</span> + format.format(currentMaxTimestamp) + <span class="string">","</span> + a.toString)</span><br><span class="line">		timestamp</span><br><span class="line">	  &#125;</span><br><span class="line">	&#125;)</span><br><span class="line">	   <span class="keyword">val</span> window = watermark</span><br><span class="line">      .keyBy(_._1)</span><br><span class="line">      .window(<span class="type">TumblingEventTimeWindows</span>.of(<span class="type">Time</span>.seconds(<span class="number">3</span>)))</span><br><span class="line">      .apply(<span class="keyword">new</span> <span class="type">WindowFunctionTest</span>)</span><br><span class="line"></span><br><span class="line">    window.print()</span><br><span class="line">    env.execute()</span><br><span class="line">  &#125;</span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">WindowFunctionTest</span> <span class="keyword">extends</span> <span class="title">WindowFunction</span>[(<span class="type">String</span>,<span class="type">Long</span>),(<span class="type">String</span>, <span class="type">Int</span>,<span class="type">String</span>,<span class="type">String</span>,<span class="type">String</span>,<span class="type">String</span>),<span class="type">String</span>,<span class="type">TimeWindow</span>]</span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">apply</span></span>(key: <span class="type">String</span>, window: <span class="type">TimeWindow</span>, input: <span class="type">Iterable</span>[(<span class="type">String</span>, <span class="type">Long</span>)], out: <span class="type">Collector</span>[(<span class="type">String</span>, <span class="type">Int</span>,<span class="type">String</span>,<span class="type">String</span>,<span class="type">String</span>,<span class="type">String</span>)]): <span class="type">Unit</span> = &#123;</span><br><span class="line">      <span class="keyword">val</span> list = input.toList.sortBy(_._2)</span><br><span class="line">      <span class="keyword">val</span> format = <span class="keyword">new</span> <span class="type">SimpleDateFormat</span>(<span class="string">"yyyy-MM-dd HH:mm:ss.SSS"</span>)</span><br><span class="line">      out.collect(key,input.size,format.format(list.head._2),format.format(list.last._2),format.format(window.getStart),format.format(window.getEnd))</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>程序解释：<br>1.接受socket数据<br>2.将socket数据map成一个 tuple2 (code:String,time:Long)<br>3.抽取timestamp，并打印 code , timestamp,转换后的timestamp ,watermark<br>4.eventtime 每三秒触发一次窗口打印code 窗口内元素个数，窗口内最早元素时间，最晚元素时间，窗口开始时间，窗口结束时间</p>
+<p>首先 我们开启socket 输入第一条数据<br><img src="/2018/09/05/Flink的windows触发机制解析/1.png" width="666"></p>
+<p>未完待续。。。</p>
+  	
+					
+	  </div>     
+	  
+
+	
+<div class="post-meta">
+      	
+
+      	
+</div>
+
+
+
+
+
+<div class="post-footer">
+  <div class="pf-left">
+      <img class="pf-avatar" src="/images/2.png">
+      <p class="pf-des">hi,lao tie</p>
+  </div>
+
+  <div class="pf-right">           
+      <div class="pf-links">
+        
+
+
+
+
+<span class="donate-btn">
+	<span class="iconfont icon-donate"></span>
+</span>
+
+
+<div id="donate-box" class="sildeUpMin">
+
+	<span class="donate-cancel iconfont icon-cancel"></span>
+
+	<div class="donate-img-box">
+		<img id="donate-qr-wechat" class="noLazyLoad donate-img" src="/images/donate1.png" alt="No Donate Image!">	
+		<img id="donate-qr-alipay" class="noLazyLoad donate-img" src="/images/donate2.png" alt="No Donate Image!">	
+	</div>
+
+	<span class="donate-word">世界美好 你也是</span>
+
+	<div class="donate-list">
+		<span class="iconfont icon-donate-wechat"></span>
+		<span class="iconfont icon-donate-alipay"></span>
+	</div>
+
+</div>
+
+ 
+        
+	
+<script id="-mob-share" src="http://f1.webshare.mob.com/code/mob-share.js?appkey=21d601593a1de"></script>
+	
+	<span class="share-btn">
+	<span class="iconfont icon-share"></span>
+	</span>
+
+
+	<div class="-mob-share sildeUpMin">
+		   			             
+            <a class="iconfont  icon-share-qq -mob-share-qq"></a>		
+     	   			             
+            <a class="iconfont  icon-share-weixin -mob-share-weixin"></a>		
+     	   			             
+            <a class="iconfont  icon-share-weibo -mob-share-weibo"></a>		
+     	   			             
+            <a class="iconfont  icon-share-douban -mob-share-douban"></a>		
+     	   			             
+            <a class="iconfont  icon-share-facebook -mob-share-facebook"></a>		
+     	   			             
+            <a class="iconfont  icon-share-twitter -mob-share-twitter"></a>		
+     	   			             
+            <a class="iconfont  icon-share-google -mob-share-google"></a>		
+     	   
+	</div>	
+
+      </div>  
+    <nav class="pf-paginator">
+      
+         
+          <a href="/2018/09/06/设计模式之行为模式/" data-hover="设计模式之行为模式">Prev</a>      
+            
+        
+            
+  </nav>   
+  </div>
+</div> 
+	
+
+
+    
+    <div id="disqus_thread"></div>
+
+    <script>
+    (function() { 
+    var d = document, s = d.createElement('script');
+    s.src = 'https://'+'lemonreds'+'.disqus.com/embed.js';
+    s.setAttribute('data-timestamp', +new Date());    
+    (d.head || d.body).appendChild(s);
+    })();
+    </script>
+
+    <noscript>Please enable JavaScript to view the  <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+    </noscript>
+
+
+	
+</article>
+
+	<div class="toc-container">
+			<div class="sidebar">
+			<p class="toc-title">
+				<i class="iconfont icon-toc"></i>
+				Contents
+			</p>
+			<div class="toc-list">
+				
+			</div>
+		</div>
+	</div>
+
+          </section> 
+      </div>            
+    
+    <a id="backTop">
+      <span>
+        <i class="iconfont icon-backtotop"></i>
+      </span>
+    </a> 
+
+  
+    
+    <div class="search-container sildeUpMin">
+        <div class="search-header">
+            <input type="text" placeholder="Typing Something here." id="search-input" class="search-input">
+            <span class="search-cancel">
+                <i class="iconfont icon-cancel">
+            </i></span>
+        </div>
+        <div id="search-result" class="search-result"></div>
+    </div>
+ 
+     <div class="mobile-menu">      
+
+      
+      <img class="mobile-menu-icon" src="/images/favicon.png">   
+      
+
+         
+            
+
+            <a class="mobile-menu-link" href="/">Home
+            </a>
+            
+         
+            
+
+            <a class="mobile-menu-link" href="/archives">Archives
+            </a>
+            
+         
+            
+
+            <a class="mobile-menu-link" href="/tags">Tags
+            </a>
+            
+         
+            
+
+            <a class="mobile-menu-link" href="/about">About
+            </a>
+            
+         
+                          
+
+            <a class="mobile-menu-link mobile-menu-search" href="#">Search </a>                 
+            
+         
+      
+</div>        
+    
+
+
+
+     
+    
+
+
+
+
+<footer id="footer">	    
+
+		
+		<div class="footer-copyright">
+		&copy;
+		
+		2018		
+	
+		Lemon
+		<br>
+
+		Theme By
+		<a href="https://github.com/Lemonreds/hexo-theme-Nayo" target="_blank">Nayo</a>	
+		</div>			
+	 
+</footer>   
+
+  
+
+    <script src="/nayo.bundle.js"></script>           
+  </body>        
+</html>
