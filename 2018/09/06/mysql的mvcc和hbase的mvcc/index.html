@@ -86,7 +86,7 @@
 	
 		<i class="iconfont icon-words"></i>
 		<span>
-			2383
+			2385
 		</span>
 	
 </div>
@@ -117,7 +117,7 @@
 <p>简单来说就是将当前事务id+1，然后新建WriteEntry对象，将事务id放入WriteEntry中，最后把他放入queue里，放到queue里是为了写操作在执行的时候是顺序执行可以简单理解HBase在每次put操作时，都会为该操作分配一个id，可以类比mysql里面的事务id，是本次put的唯一标识<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">completeAndWait</span><span class="params">(WriteEntry e)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (!complete(e)) &#123;</span><br><span class="line">    waitForRead(e);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <p>complete主要工作是推进writeQueue工作，然后将readPoint尽量的更新到最大的WriteNumber</p>
 <p>如果最后readPoint还是小于当前的WriteNumber，则进入waitForRead，在waitForRead将等待readPoint达到当前写入的线程事务id，如果过久则interrupted</p>
-<p>下面看一段读的时候的scan的代码<br><img src="/2018/09/06/mysql的mvcc和hbase的mvcc/5.png" width="666"><br>它获取了readPoint，注意只有在READ_COMMITTED下，readpoint才是生效的，然后会对memstore和storeFile进行查询，过滤掉大于这次readPoint的数据，防止读取到还没提交成功的数据，也就是READ_COMMITTED读已提交，如果是READ_COMMITTED则readPoint会返回Long.MAX_VALUE，就有会读到最新的的数据包括没提交的</p>
+<p>下面看一段读的时候的scan的代码<br><img src="/2018/09/06/mysql的mvcc和hbase的mvcc/5.png" width="666"><br>它获取了readPoint，注意只有在READ_COMMITTED下，readpoint才是生效的，然后会对memstore和storeFile进行查询，过滤掉大于这次readPoint的数据，防止读取到还没提交成功的数据，也就是READ_COMMITTED读已提交，如果是READ_UNCOMMITTED则readPoint会返回Long.MAX_VALUE，就有会读到最新的的数据包括没提交的</p>
   	
 					
 	  </div>     
@@ -204,7 +204,7 @@
         
       
         
-        <a href="/2018/09/06/设计模式之行为模式/" data-hover="设计模式之行为模式"> 下一篇</a>
+        <a href="/2018/09/06/设计模式之行为模式/" data-hover="设计模式之行为模式"> Next</a>
             
   </nav>   
   </div>
@@ -235,7 +235,7 @@
 			<div class="sidebar">
 			<p class="toc-title">
 				<i class="iconfont icon-toc"></i>
-				目录
+				Contents
 			</p>
 			<div class="toc-list">
 				
@@ -256,7 +256,7 @@
     
     <div class="search-container sildeUpMin">
         <div class="search-header">
-            <input type="text" placeholder="输入你想搜索的" id="search-input" class="search-input">
+            <input type="text" placeholder="Typing Something here." id="search-input" class="search-input">
             <span class="search-cancel">
                 <i class="iconfont icon-cancel">
             </i></span>
@@ -273,31 +273,31 @@
          
             
 
-            <a class="mobile-menu-link" href="/">首页
+            <a class="mobile-menu-link" href="/">Home
             </a>
             
          
             
 
-            <a class="mobile-menu-link" href="/archives">归档
+            <a class="mobile-menu-link" href="/archives">Archives
             </a>
             
          
             
 
-            <a class="mobile-menu-link" href="/tags">标签
+            <a class="mobile-menu-link" href="/tags">Tags
             </a>
             
          
             
 
-            <a class="mobile-menu-link" href="/about">关于
+            <a class="mobile-menu-link" href="/about">About
             </a>
             
          
                           
 
-            <a class="mobile-menu-link mobile-menu-search" href="#">搜索 </a>                 
+            <a class="mobile-menu-link mobile-menu-search" href="#">Search </a>                 
             
          
       
